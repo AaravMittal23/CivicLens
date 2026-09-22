@@ -1,0 +1,7 @@
+{
+    "gemini_api_key": "AQ.Ab8RN6K_-FlqxMEQU8c4Ltw4SBMyWuxl-VE_R_D_RZVWtvCXbA",
+    "submission_method": "api",
+    "smtp_user": "",
+    "smtp_pass": "",
+    "webhook_url": "http://127.0.0.1:5001/webhook"
+}

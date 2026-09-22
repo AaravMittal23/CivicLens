@@ -22,7 +22,11 @@ def get_config():
             "submission_method": "native",
             "smtp_user": "",
             "smtp_pass": "",
-            "webhook_url": ""
+            "webhook_url": "",
+            "sendgrid_api_key": "",
+            "sendgrid_sender": "",
+            "google_client_id": "",
+            "google_client_secret": ""
         }
     with open(CONFIG_FILE, 'r') as f:
         return json.load(f)
@@ -121,6 +125,65 @@ def analyze():
                  os.remove(filepath)
             return jsonify({'error': str(e)}), 500
 
+import base64
+
+@app.route('/api/oauth/google/url')
+def google_oauth_url():
+    config = get_config()
+    client_id = config.get('google_client_id')
+    if not client_id:
+        # Mock mode if no client ID is configured
+        return jsonify({"url": "/api/oauth/google/mock"})
+    
+    redirect_uri = request.host_url.rstrip('/') + "/api/oauth/google/callback"
+    scope = "https://www.googleapis.com/auth/gmail.send"
+    auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?client_id={client_id}&redirect_uri={redirect_uri}&response_type=code&scope={scope}&access_type=offline"
+    return jsonify({"url": auth_url})
+
+@app.route('/api/oauth/google/mock')
+def google_oauth_mock():
+    # A mock endpoint that simulates a successful Google OAuth login for demo purposes
+    return """
+    <html><body>
+    <h2>Mock Google OAuth Login</h2>
+    <p>Simulating successful login...</p>
+    <script>
+        // Send a fake token back to the parent window
+        window.opener.postMessage({ type: 'oauth_success', token: 'mock_google_access_token_12345' }, '*');
+        window.close();
+    </script>
+    </body></html>
+    """
+
+@app.route('/api/oauth/google/callback')
+def google_oauth_callback():
+    code = request.args.get('code')
+    config = get_config()
+    client_id = config.get('google_client_id')
+    client_secret = config.get('google_client_secret')
+    redirect_uri = request.host_url.rstrip('/') + "/api/oauth/google/callback"
+
+    if code and client_id and client_secret:
+        token_url = "https://oauth2.googleapis.com/token"
+        payload = {
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code"
+        }
+        resp = requests.post(token_url, data=payload)
+        if resp.status_code == 200:
+            access_token = resp.json().get('access_token')
+            return f"""
+            <script>
+                window.opener.postMessage({{ type: 'oauth_success', token: '{access_token}' }}, '*');
+                window.close();
+            </script>
+            """
+    
+    return "OAuth Failed. You can close this window."
+
 @app.route('/api/submit', methods=['POST'])
 def submit():
     config = get_config()
@@ -175,6 +238,70 @@ def submit():
         else:
             return jsonify({'success': True, 'message': '[MOCK API] Simulated JSON Payload sent! (Admin must provide Webhook URL)'})
             
+    elif method == 'sendgrid':
+        sg_api_key = config.get('sendgrid_api_key')
+        sg_sender = config.get('sendgrid_sender')
+        citizen_email = data.get('citizen_email', 'citizen@example.com')
+        recipient = data.get('department_email')
+        subject = f"System Mailer: {data.get('issue_title')} [Severity: {data.get('severity')}/10]"
+        body = data.get('complaint_letter') + f"\n\nLocation: https://www.google.com/maps/search/?api=1&query={data.get('lat')},{data.get('lng')}"
+        
+        if sg_api_key and sg_sender:
+            headers = {
+                "Authorization": f"Bearer {sg_api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "personalizations": [{"to": [{"email": recipient}]}],
+                "from": {"email": sg_sender, "name": "CivicConnect System"},
+                "reply_to": {"email": citizen_email},
+                "subject": subject,
+                "content": [{"type": "text/plain", "value": body}]
+            }
+            try:
+                resp = requests.post("https://api.sendgrid.com/v3/mail/send", json=payload, headers=headers)
+                if resp.status_code in [200, 202]:
+                    return jsonify({'success': True, 'message': 'Email sent successfully via SendGrid Transactional Mailer!'})
+                else:
+                    return jsonify({'error': f'SendGrid Error: {resp.text}'}), 500
+            except Exception as e:
+                return jsonify({'error': f'SendGrid Request Error: {str(e)}'}), 500
+        else:
+            return jsonify({'success': True, 'message': f'[MOCK SENDGRID] Simulated Transactional Email sent! Reply-To set as {citizen_email}'})
+            
+    elif method == 'oauth':
+        access_token = data.get('oauth_token')
+        recipient = data.get('department_email')
+        subject = f"Citizen Report: {data.get('issue_title')} [Severity: {data.get('severity')}/10]"
+        body = data.get('complaint_letter') + f"\n\nLocation: https://www.google.com/maps/search/?api=1&query={data.get('lat')},{data.get('lng')}"
+        
+        if not access_token:
+            return jsonify({'error': 'Missing OAuth Access Token.'}), 400
+            
+        if access_token == 'mock_google_access_token_12345':
+            return jsonify({'success': True, 'message': '[MOCK GMAIL API] Simulated email sent directly from Citizen Gmail account via OAuth!'})
+            
+        # Real Gmail API Send
+        try:
+            msg = MIMEMultipart()
+            msg['To'] = recipient
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            raw_msg = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+            
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+            resp = requests.post("https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send", json={"raw": raw_msg}, headers=headers)
+            
+            if resp.status_code == 200:
+                return jsonify({'success': True, 'message': 'Email sent successfully from Citizen Gmail Account (OAuth)!'})
+            else:
+                return jsonify({'error': f'Gmail API Error: {resp.text}'}), 500
+        except Exception as e:
+            return jsonify({'error': f'OAuth Request Error: {str(e)}'}), 500
+
     return jsonify({'error': 'Invalid server submission method'}), 400
 
 if __name__ == '__main__':

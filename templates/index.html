@@ -333,10 +333,57 @@
                 currentMarker.setLatLng([currentLat, currentLng]);
             }
             
+            // Update Submit button based on method
+            const sendBtn = document.getElementById('sendBtn');
+            const sendNote = document.getElementById('sendNote');
+            if (data.sys_submission_method === 'oauth') {
+                sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 48 48" fill="currentColor"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.7 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Sign in with Google to Submit`;
+                sendBtn.className = "w-full bg-white text-slate-700 border border-slate-300 font-bold py-4 rounded-xl hover:bg-slate-50 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-3 text-lg shadow-sm";
+                sendNote.textContent = "You will be prompted to authorize Gmail access.";
+            } else {
+                sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg> Submit Complaint`;
+                sendBtn.className = "w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-lg";
+                sendNote.textContent = "Report will be securely routed to authorities";
+            }
+
             // Fix map rendering
             setTimeout(() => {
                 currentMap.invalidateSize();
             }, 100);
+        }
+
+        async function performSubmit(token = null, citizenEmail = null) {
+            const letterBody = document.getElementById('resLetter').value;
+            
+            if (analysisData.sys_submission_method === 'native') {
+                const email = analysisData.department_email;
+                const subject = encodeURIComponent(`URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`);
+                const body = encodeURIComponent(letterBody + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`);
+                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+                return;
+            } 
+            
+            const payload = {
+                category: analysisData.category,
+                lat: currentLat,
+                lng: currentLng,
+                severity: analysisData.severity,
+                description: analysisData.description,
+                issue_title: analysisData.issue_title,
+                department_email: analysisData.department_email,
+                complaint_letter: letterBody,
+                oauth_token: token,
+                citizen_email: citizenEmail
+            };
+
+            const response = await fetch('/api/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const res = await response.json();
+            if (res.success) alert("✅ " + res.message);
+            else alert("❌ Error: " + res.error);
         }
 
         // Handle Submission button
@@ -346,36 +393,60 @@
             const btn = document.getElementById('sendBtn');
             const originalText = btn.innerHTML;
             
+            if (analysisData.sys_submission_method === 'sendgrid') {
+                const email = prompt("Enter your email address to receive replies from the municipality:");
+                if (!email) return; // cancelled
+                
+                btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Sending...`;
+                btn.disabled = true;
+                try {
+                    await performSubmit(null, email);
+                } catch(err) { alert("Submit failed"); }
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                return;
+            }
+            
+            if (analysisData.sys_submission_method === 'oauth') {
+                // Open OAuth Popup
+                try {
+                    const res = await fetch('/api/oauth/google/url');
+                    const data = await res.json();
+                    
+                    const width = 500;
+                    const height = 600;
+                    const left = (screen.width/2)-(width/2);
+                    const top = (screen.height/2)-(height/2);
+                    
+                    const popup = window.open(data.url, "Google OAuth", `width=${width},height=${height},top=${top},left=${left}`);
+                    
+                    // Listen for message from popup
+                    const messageListener = async function(e) {
+                        if (e.data.type === 'oauth_success') {
+                            window.removeEventListener('message', messageListener);
+                            btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Sending via Gmail...`;
+                            btn.disabled = true;
+                            
+                            try {
+                                await performSubmit(e.data.token, null);
+                            } catch(err) { alert("Submit failed"); }
+                            
+                            btn.innerHTML = originalText;
+                            btn.disabled = false;
+                        }
+                    };
+                    window.addEventListener('message', messageListener);
+                } catch(err) {
+                    alert("Could not initialize OAuth: " + err);
+                }
+                return;
+            }
+
+            // Normal submit (API/SMTP)
             btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Processing...`;
             btn.disabled = true;
-
-            const letterBody = document.getElementById('resLetter').value;
-
             try {
-                if (analysisData.sys_submission_method === 'native') {
-                    const email = analysisData.department_email;
-                    const subject = encodeURIComponent(`URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`);
-                    const body = encodeURIComponent(letterBody + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`);
-                    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-                } else {
-                    const response = await fetch('/api/submit', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            category: analysisData.category,
-                            lat: currentLat,
-                            lng: currentLng,
-                            severity: analysisData.severity,
-                            description: analysisData.description,
-                            issue_title: analysisData.issue_title,
-                            department_email: analysisData.department_email,
-                            complaint_letter: letterBody
-                        })
-                    });
-                    const res = await response.json();
-                    if (res.success) alert(res.message);
-                    else alert("Error: " + res.error);
-                }
+                await performSubmit();
             } catch (err) {
                 alert("Submission failed: " + err.message);
             } finally {

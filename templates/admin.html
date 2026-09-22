@@ -41,6 +41,8 @@
                         <option value="native">Client-Side Mail App (mailto: fallback)</option>
                         <option value="smtp">Automated SMTP Email (Background)</option>
                         <option value="api">Official Municipal API (JSON Webhook)</option>
+                        <option value="sendgrid">System Mailer (SendGrid Transactional)</option>
+                        <option value="oauth">User's Gmail/Outlook (OAuth 2.0)</option>
                     </select>
                 </div>
                 
@@ -57,6 +59,26 @@
                 <div class="mt-4 bg-slate-50 p-4 rounded-lg border">
                     <p class="text-sm font-semibold mb-2">Webhook URL (if API selected)</p>
                     <input type="url" id="webhook_url" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="https://endpoint.gov.in/report">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-lg border">
+                    <div class="col-span-2"><p class="text-sm font-semibold">SendGrid Settings (if System Mailer selected)</p></div>
+                    <div>
+                        <input type="password" id="sendgrid_api_key" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="SendGrid API Key (SG.xxx)">
+                    </div>
+                    <div>
+                        <input type="email" id="sendgrid_sender" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="Verified Sender Email">
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-lg border">
+                    <div class="col-span-2"><p class="text-sm font-semibold">Google OAuth Settings (if OAuth selected)</p></div>
+                    <div>
+                        <input type="password" id="google_client_id" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="Google Client ID">
+                    </div>
+                    <div>
+                        <input type="password" id="google_client_secret" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="Google Client Secret">
+                    </div>
                 </div>
             </section>
 
@@ -77,6 +99,10 @@
                 document.getElementById('smtp_user').value = data.smtp_user || '';
                 document.getElementById('smtp_pass').value = data.smtp_pass || '';
                 document.getElementById('webhook_url').value = data.webhook_url || '';
+                document.getElementById('sendgrid_api_key').value = data.sendgrid_api_key || '';
+                document.getElementById('sendgrid_sender').value = data.sendgrid_sender || '';
+                document.getElementById('google_client_id').value = data.google_client_id || '';
+                document.getElementById('google_client_secret').value = data.google_client_secret || '';
             });
 
         function saveConfig() {
@@ -90,7 +116,11 @@
                 submission_method: document.getElementById('submission_method').value,
                 smtp_user: document.getElementById('smtp_user').value,
                 smtp_pass: document.getElementById('smtp_pass').value,
-                webhook_url: document.getElementById('webhook_url').value
+                webhook_url: document.getElementById('webhook_url').value,
+                sendgrid_api_key: document.getElementById('sendgrid_api_key').value,
+                sendgrid_sender: document.getElementById('sendgrid_sender').value,
+                google_client_id: document.getElementById('google_client_id').value,
+                google_client_secret: document.getElementById('google_client_secret').value
             };
 
             fetch('/api/admin/config', {
