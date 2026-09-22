@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicSense - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-8">
+
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
+        <div class="bg-slate-900 px-8 py-6 text-white flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">System Configuration</h1>
+                <p class="text-slate-400 text-sm mt-1">Configure backend APIs and routing for the citizen portal.</p>
+            </div>
+            <a href="/" class="text-sm bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg transition">View App</a>
+        </div>
+        
+        <div class="p-8 space-y-8" id="configForm">
+            
+            <!-- Gemini Setup -->
+            <section>
+                <h2 class="text-lg font-bold border-b pb-2 mb-4">1. Artificial Intelligence</h2>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Google Gemini API Key</label>
+                    <input type="password" id="gemini_api_key" class="w-full border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500" placeholder="AIzaSy...">
+                </div>
+            </section>
+
+            <!-- Delivery Method -->
+            <section>
+                <h2 class="text-lg font-bold border-b pb-2 mb-4">2. Submission Routing</h2>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-1">Default Submission Method</label>
+                    <p class="text-xs text-slate-500 mb-2">How should citizen reports be delivered to the authorities?</p>
+                    <select id="submission_method" class="w-full border rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="native">Client-Side Mail App (mailto: fallback)</option>
+                        <option value="smtp">Automated SMTP Email (Background)</option>
+                        <option value="api">Official Municipal API (JSON Webhook)</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-lg border">
+                    <div class="col-span-2"><p class="text-sm font-semibold">SMTP Settings (if SMTP selected)</p></div>
+                    <div>
+                        <input type="email" id="smtp_user" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="SMTP Email (Gmail)">
+                    </div>
+                    <div>
+                        <input type="password" id="smtp_pass" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="App Password">
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-slate-50 p-4 rounded-lg border">
+                    <p class="text-sm font-semibold mb-2">Webhook URL (if API selected)</p>
+                    <input type="url" id="webhook_url" class="w-full border rounded-lg px-3 py-2 text-sm outline-none" placeholder="https://endpoint.gov.in/report">
+                </div>
+            </section>
+
+            <button onclick="saveConfig()" id="saveBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">
+                Save Configuration to Server
+            </button>
+            <p id="statusMsg" class="text-center text-sm font-medium mt-2 hidden"></p>
+        </div>
+    </div>
+
+    <script>
+        // Load initial config
+        fetch('/api/admin/config')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('gemini_api_key').value = data.gemini_api_key || '';
+                document.getElementById('submission_method').value = data.submission_method || 'native';
+                document.getElementById('smtp_user').value = data.smtp_user || '';
+                document.getElementById('smtp_pass').value = data.smtp_pass || '';
+                document.getElementById('webhook_url').value = data.webhook_url || '';
+            });
+
+        function saveConfig() {
+            const btn = document.getElementById('saveBtn');
+            const msg = document.getElementById('statusMsg');
+            btn.disabled = true;
+            btn.innerText = "Saving...";
+            
+            const payload = {
+                gemini_api_key: document.getElementById('gemini_api_key').value,
+                submission_method: document.getElementById('submission_method').value,
+                smtp_user: document.getElementById('smtp_user').value,
+                smtp_pass: document.getElementById('smtp_pass').value,
+                webhook_url: document.getElementById('webhook_url').value
+            };
+
+            fetch('/api/admin/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(data => {
+                btn.disabled = false;
+                btn.innerText = "Save Configuration to Server";
+                msg.innerText = "✅ Saved successfully!";
+                msg.classList.remove('hidden', 'text-red-600');
+                msg.classList.add('text-green-600');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }).catch(err => {
+                btn.disabled = false;
+                btn.innerText = "Save Configuration to Server";
+                msg.innerText = "❌ Error saving configuration.";
+                msg.classList.remove('hidden', 'text-green-600');
+                msg.classList.add('text-red-600');
+            });
+        }
+    </script>
+</body>
+</html>

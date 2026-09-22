@@ -53,61 +53,10 @@
                 </div>
                 <h1 class="text-xl font-bold tracking-tight text-slate-900">CivicSense</h1>
             </div>
-            <button onclick="toggleSettings()" class="flex items-center gap-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 px-4 py-2 rounded-full hover:bg-slate-50 transition shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287-.947c.886.54 2.042.061 2.287-.947 1.56-.38 1.56-2.6 0-2.978a1.532 1.532 0 01-2.287-.947c1.372-.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
-                </svg>
-                API Key
-                <span id="keyStatus" class="flex h-2 w-2 relative ml-1">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-            </button>
+            <!-- Admin link for handoff testing -->
+            <a href="/admin" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition">Admin Login</a>
         </div>
     </nav>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center animate__animated animate__fadeIn animate__faster p-4 overflow-y-auto">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full my-auto transform transition-all">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-800">Configuration</h2>
-                <button onclick="toggleSettings()" class="text-slate-400 hover:text-slate-600 transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-            </div>
-            
-            <div class="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
-                <div>
-                    <label class="block text-sm font-bold text-slate-800 mb-1">1. Gemini API Key (Required)</label>
-                    <p class="text-xs text-slate-500 mb-2">Stored securely in your browser's local storage.</p>
-                    <input type="password" id="apiKeyInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="AIzaSy...">
-                </div>
-
-                <hr class="border-slate-100">
-
-                <div>
-                    <label class="block text-sm font-bold text-slate-800 mb-1">2. Automated Email (Optional)</label>
-                    <p class="text-xs text-slate-500 mb-2">Provide Gmail App Password for SMTP integration.</p>
-                    <input type="email" id="smtpUserInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Gmail Address">
-                    <input type="password" id="smtpPassInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="App Password">
-                </div>
-
-                <hr class="border-slate-100">
-
-                <div>
-                    <label class="block text-sm font-bold text-slate-800 mb-1">3. Municipal API Webhook (Optional)</label>
-                    <p class="text-xs text-slate-500 mb-2">Direct JSON payload delivery endpoint.</p>
-                    <input type="url" id="webhookInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://endpoint.com/webhook">
-                </div>
-            </div>
-
-            <div class="mt-6 pt-4 border-t border-slate-100">
-                <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
-                    Save Configuration
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto px-4 py-12 flex-grow z-10 relative">
@@ -224,15 +173,6 @@
                     
                     <textarea id="resLetter" rows="10" class="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:outline-none text-slate-700 leading-relaxed font-serif resize-y" spellcheck="false"></textarea>
                     
-                    <div class="mb-4">
-                        <label class="block text-sm font-semibold text-slate-700 mb-2">Submission Method</label>
-                        <select id="submitMethod" class="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                            <option value="native">📱 Native Device Mail App (Default)</option>
-                            <option value="smtp">📧 Automated Background Email (SMTP)</option>
-                            <option value="api">🔌 Official Municipal API (JSON Webhook)</option>
-                        </select>
-                    </div>
-
                     <button id="sendBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
@@ -240,7 +180,7 @@
                         Submit Complaint
                     </button>
                     <p id="sendNote" class="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
-                        Select a method and submit
+                        Report will be securely routed to authorities
                     </p>
                 </div>
             </div>
@@ -254,63 +194,6 @@
         let currentMap = null;
         let currentMarker = null;
         let analysisData = null; // Store analysis results
-
-        // Settings Management
-        function toggleSettings() {
-            const modal = document.getElementById('settingsModal');
-            if (modal.classList.contains('hidden')) {
-                modal.classList.remove('hidden');
-                document.getElementById('apiKeyInput').value = localStorage.getItem('civic_gemini_key') || '';
-                document.getElementById('smtpUserInput').value = localStorage.getItem('civic_smtp_user') || '';
-                document.getElementById('smtpPassInput').value = localStorage.getItem('civic_smtp_pass') || '';
-                document.getElementById('webhookInput').value = localStorage.getItem('civic_api_url') || '';
-            } else {
-                modal.classList.add('hidden');
-            }
-        }
-
-        function saveSettings() {
-            const key = document.getElementById('apiKeyInput').value.trim();
-            if (key) {
-                localStorage.setItem('civic_gemini_key', key);
-            } else {
-                alert("Gemini API Key is required.");
-                return;
-            }
-            localStorage.setItem('civic_smtp_user', document.getElementById('smtpUserInput').value.trim());
-            localStorage.setItem('civic_smtp_pass', document.getElementById('smtpPassInput').value.trim());
-            localStorage.setItem('civic_api_url', document.getElementById('webhookInput').value.trim());
-            
-            updateKeyStatus();
-            toggleSettings();
-            alert("Settings saved successfully!");
-        }
-
-        function updateKeyStatus() {
-            const hasKey = !!localStorage.getItem('civic_gemini_key');
-            const indicator = document.getElementById('keyStatus').querySelectorAll('span');
-            if (hasKey) {
-                indicator[0].classList.replace('bg-red-400', 'bg-green-400');
-                indicator[1].classList.replace('bg-red-500', 'bg-green-500');
-                indicator[0].classList.remove('animate-ping');
-            } else {
-                indicator[0].classList.replace('bg-green-400', 'bg-red-400');
-                indicator[1].classList.replace('bg-green-500', 'bg-red-500');
-                indicator[0].classList.add('animate-ping');
-            }
-        }
-
-        // Initialize status on load
-        updateKeyStatus();
-
-        // Check key before upload
-        function ensureApiKey() {
-            if (!localStorage.getItem('civic_gemini_key')) {
-                toggleSettings();
-                return false;
-            }
-            return true;
-        }
 
         // Get Location
         if (navigator.geolocation) {
@@ -361,19 +244,14 @@
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!ensureApiKey()) return;
-
             const file = imageInput.files[0];
             if (!file) return;
-
-            const apiKey = localStorage.getItem('civic_gemini_key');
 
             const formData = new FormData();
             formData.append('image', file);
             formData.append('lat', currentLat);
             formData.append('lng', currentLng);
             formData.append('address', `${currentLat}, ${currentLng}`);
-            formData.append('api_key', apiKey);
 
             document.getElementById('uploadForm').classList.add('opacity-50', 'pointer-events-none');
             document.getElementById('loadingIndicator').classList.remove('hidden');
@@ -395,11 +273,6 @@
                     showResults(data);
                 } else {
                     alert('Error: ' + (data.error || 'Something went wrong'));
-                    if (data.error && data.error.includes('API key')) {
-                        localStorage.removeItem('civic_gemini_key');
-                        updateKeyStatus();
-                        toggleSettings();
-                    }
                 }
             } catch (error) {
                 console.error(error);
@@ -470,40 +343,22 @@
         document.getElementById('sendBtn').onclick = async function() {
             if (!analysisData) return;
             
-            const method = document.getElementById('submitMethod').value;
             const btn = document.getElementById('sendBtn');
             const originalText = btn.innerHTML;
             
             btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Processing...`;
             btn.disabled = true;
 
-            const letterBody = document.getElementById('resLetter').value + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`;
+            const letterBody = document.getElementById('resLetter').value;
 
             try {
-                if (method === 'native') {
+                if (analysisData.sys_submission_method === 'native') {
                     const email = analysisData.department_email;
                     const subject = encodeURIComponent(`URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`);
-                    const body = encodeURIComponent(letterBody);
+                    const body = encodeURIComponent(letterBody + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`);
                     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-                } 
-                else if (method === 'smtp') {
-                    const response = await fetch('/api/send_email', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            recipient: analysisData.department_email,
-                            subject: `URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`,
-                            body: letterBody,
-                            smtp_user: localStorage.getItem('civic_smtp_user'),
-                            smtp_pass: localStorage.getItem('civic_smtp_pass')
-                        })
-                    });
-                    const res = await response.json();
-                    if (res.success) alert(res.message);
-                    else alert("Error: " + res.error);
-                } 
-                else if (method === 'api') {
-                    const response = await fetch('/api/submit_municipal', {
+                } else {
+                    const response = await fetch('/api/submit', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -512,9 +367,9 @@
                             lng: currentLng,
                             severity: analysisData.severity,
                             description: analysisData.description,
-                            title: analysisData.issue_title,
-                            letter: letterBody,
-                            api_url: localStorage.getItem('civic_api_url')
+                            issue_title: analysisData.issue_title,
+                            department_email: analysisData.department_email,
+                            complaint_letter: letterBody
                         })
                     });
                     const res = await response.json();
