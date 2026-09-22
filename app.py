@@ -11,6 +11,7 @@ import requests
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max limit to prevent server overload
 CONFIG_FILE = 'config.json'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -111,7 +112,20 @@ def analyze():
                 )
             )
             
-            result = json.loads(response.text)
+            # Robust JSON parsing to handle Gemini markdown wrappers (```json ... ```)
+            raw_text = response.text.strip()
+            if raw_text.startswith("```json"):
+                raw_text = raw_text[7:]
+            if raw_text.startswith("```"):
+                raw_text = raw_text[3:]
+            if raw_text.endswith("```"):
+                raw_text = raw_text[:-3]
+                
+            try:
+                result = json.loads(raw_text.strip())
+            except json.JSONDecodeError:
+                raise Exception(f"AI returned invalid format: {raw_text[:100]}...")
+                
             client.files.delete(name=uploaded_file.name)
             os.remove(filepath)
             

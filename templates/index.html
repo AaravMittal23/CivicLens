@@ -194,6 +194,7 @@
         let currentMap = null;
         let currentMarker = null;
         let analysisData = null; // Store analysis results
+        let compressedImageBlob = null; // Store compressed image
 
         // Get Location
         if (navigator.geolocation) {
@@ -201,7 +202,7 @@
                 (position) => {
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
-                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
+                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)} (You can drag the pin later to adjust)`;
                     document.getElementById('locStatus').classList.replace('bg-yellow-400', 'bg-green-500');
                     document.getElementById('locStatus').classList.remove('animate-pulse');
                 },
@@ -219,7 +220,7 @@
             document.getElementById('locationText').textContent = "Geolocation not supported.";
         }
 
-        // Handle Image Selection
+        // Handle Image Selection and Compression
         const imageInput = document.getElementById('imageInput');
         const imagePreview = document.getElementById('imagePreview');
         const previewContainer = document.getElementById('imagePreviewContainer');
@@ -231,10 +232,42 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                    previewContainer.classList.remove('hidden');
-                    uploadPrompt.style.opacity = '0';
-                    analyzeBtn.disabled = false;
+                    const img = new Image();
+                    img.onload = function() {
+                        // Compress Image to prevent slow uploads and server memory crashes
+                        const MAX_WIDTH = 1024;
+                        const MAX_HEIGHT = 1024;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        canvas.toBlob((blob) => {
+                            compressedImageBlob = blob;
+                            // Show preview
+                            imagePreview.src = URL.createObjectURL(blob);
+                            previewContainer.classList.remove('hidden');
+                            uploadPrompt.style.opacity = '0';
+                            analyzeBtn.disabled = false;
+                        }, 'image/jpeg', 0.8);
+                    }
+                    img.src = e.target.result;
                 }
                 reader.readAsDataURL(file);
             }
@@ -244,11 +277,10 @@
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const file = imageInput.files[0];
-            if (!file) return;
+            if (!compressedImageBlob) return;
 
             const formData = new FormData();
-            formData.append('image', file);
+            formData.append('image', compressedImageBlob, 'upload.jpg');
             formData.append('lat', currentLat);
             formData.append('lng', currentLng);
             formData.append('address', `${currentLat}, ${currentLng}`);
@@ -272,11 +304,11 @@
                     analysisData = data; // store globally for submission
                     showResults(data);
                 } else {
-                    alert('Error: ' + (data.error || 'Something went wrong'));
+                    alert('Server Error: ' + (data.error || 'Something went wrong processing the image.'));
                 }
             } catch (error) {
                 console.error(error);
-                alert('Connection error communicating with the server.');
+                alert('Connection error communicating with the server. Please check your internet connection.');
             } finally {
                 document.getElementById('uploadForm').classList.remove('opacity-50', 'pointer-events-none');
                 document.getElementById('loadingIndicator').classList.add('hidden');
@@ -327,7 +359,15 @@
                     iconAnchor: [10, 10]
                 });
                 
-                currentMarker = L.marker([currentLat, currentLng], {icon: customIcon}).addTo(currentMap);
+                currentMarker = L.marker([currentLat, currentLng], {icon: customIcon, draggable: true}).addTo(currentMap);
+                
+                // Allow user to drag pin to correct location
+                currentMarker.on('dragend', function (e) {
+                    const coords = e.target.getLatLng();
+                    currentLat = coords.lat;
+                    currentLng = coords.lng;
+                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)} (Manual Override)`;
+                });
             } else {
                 currentMap.setView([currentLat, currentLng], 16);
                 currentMarker.setLatLng([currentLat, currentLng]);
