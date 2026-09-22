@@ -25,6 +25,15 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
+    api_key = request.form.get('api_key')
+    if not api_key:
+        return jsonify({'error': 'Please provide your Gemini API key in the frontend.'}), 400
+
+    try:
+        client = genai.Client(api_key=api_key)
+    except Exception as e:
+        return jsonify({'error': f'Failed to initialize Gemini Client: {str(e)}'}), 400
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image uploaded'}), 400
     
@@ -37,9 +46,6 @@ def analyze():
     address = request.form.get('address', 'Unknown location')
     
     if file:
-        if not client:
-            return jsonify({'error': 'Gemini API Key is missing. Please add it to the .env file.'}), 500
-
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
@@ -90,6 +96,8 @@ def analyze():
             
         except Exception as e:
             print(f"Error: {e}")
+            if os.path.exists(filepath):
+                 os.remove(filepath)
             return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

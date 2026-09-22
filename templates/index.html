@@ -7,118 +7,216 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Animate.css for smooth animations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        #map { height: 300px; width: 100%; border-radius: 0.5rem; z-index: 10;}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        #map { height: 250px; width: 100%; border-radius: 0.75rem; z-index: 10;}
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #2563eb;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .gradient-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-image: linear-gradient(90deg, #2563eb, #7c3aed);
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative overflow-x-hidden">
 
-    <nav class="bg-blue-600 text-white p-4 shadow-md">
-        <div class="max-w-5xl mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <!-- Decorative background blobs -->
+    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob z-0"></div>
+    <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 z-0"></div>
+
+    <!-- Navigation -->
+    <nav class="glassmorphism sticky top-0 z-50 border-b border-slate-200 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                </div>
+                <h1 class="text-xl font-bold tracking-tight text-slate-900">CivicSense</h1>
+            </div>
+            <button onclick="toggleSettings()" class="flex items-center gap-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 px-4 py-2 rounded-full hover:bg-slate-50 transition shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287-.947c.886.54 2.042.061 2.287-.947 1.56-.38 1.56-2.6 0-2.978a1.532 1.532 0 01-2.287-.947c1.372-.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
                 </svg>
-                CivicSense
-            </h1>
-            <p class="text-sm opacity-80">AI-Powered Civic Issue Reporting</p>
+                API Key
+                <span id="keyStatus" class="flex h-2 w-2 relative ml-1">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+            </button>
         </div>
     </nav>
 
-    <main class="max-w-5xl mx-auto p-4 py-8">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center animate__animated animate__fadeIn animate__faster">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800">Setup Gemini API</h2>
+                <button onclick="toggleSettings()" class="text-slate-400 hover:text-slate-600 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <p class="text-sm text-slate-600 mb-6">To use CivicSense, please provide your Google Gemini API key. It is stored securely in your browser's local storage and is never saved on our servers.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Gemini API Key</label>
+                    <input type="password" id="apiKeyInput" class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="AIzaSy...">
+                </div>
+                <button onclick="saveApiKey()" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
+                    Save API Key
+                </button>
+            </div>
+            <div class="mt-4 text-center">
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline">Don't have a key? Get one here.</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-12 flex-grow z-10 relative">
+        
+        <!-- Hero Section -->
+        <div class="text-center max-w-2xl mx-auto mb-12 animate__animated animate__fadeInUp">
+            <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+                Report Civic Issues with <span class="gradient-text">AI Precision</span>
+            </h2>
+            <p class="text-lg text-slate-600 mb-8">See a pothole, broken streetlight, or garbage dump? Snap a photo. Our AI identifies the issue, drafts a formal letter, and finds the right department for you instantly.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             
             <!-- Left Column: Upload -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
-                <h2 class="text-xl font-semibold mb-4">Report an Issue</h2>
+            <div class="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 animate__animated animate__fadeInLeft">
+                <h3 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                    <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">1</span>
+                    Upload Photo
+                </h3>
                 
-                <form id="uploadForm" class="space-y-4">
-                    <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition cursor-pointer" id="dropZone" onclick="document.getElementById('imageInput').click()">
-                        <div id="imagePreviewContainer" class="hidden mb-4">
-                            <img id="imagePreview" class="max-h-48 mx-auto rounded-lg shadow-sm" />
+                <form id="uploadForm" class="space-y-6">
+                    <div class="border-2 border-dashed border-blue-200 rounded-2xl p-10 text-center hover:bg-blue-50/50 transition cursor-pointer group relative overflow-hidden bg-slate-50" id="dropZone" onclick="document.getElementById('imageInput').click()">
+                        <div id="imagePreviewContainer" class="hidden absolute inset-0 bg-black/5 flex items-center justify-center backdrop-blur-sm">
+                            <img id="imagePreview" class="max-h-full object-contain shadow-lg" />
+                            <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-slate-700 shadow flex items-center gap-1 cursor-pointer">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                Change Photo
+                            </div>
                         </div>
-                        <div id="uploadPrompt">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-slate-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                            <p class="text-sm font-medium text-slate-600">Click to capture or upload photo</p>
-                            <p class="text-xs text-slate-400 mt-1">JPEG, PNG up to 10MB</p>
+                        <div id="uploadPrompt" class="flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            </div>
+                            <p class="text-base font-medium text-slate-700">Tap to snap a picture or upload</p>
+                            <p class="text-sm text-slate-400 mt-2">Supports JPG, PNG (Max 10MB)</p>
                         </div>
                         <input type="file" id="imageInput" accept="image/*" class="hidden" capture="environment">
                     </div>
 
-                    <div class="bg-blue-50 p-3 rounded-lg flex items-start gap-3 border border-blue-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <div>
-                            <p class="text-sm font-medium text-slate-700">Location detected</p>
-                            <p id="locationText" class="text-xs text-slate-500">Acquiring GPS...</p>
+                    <div class="bg-blue-50/50 p-4 rounded-xl flex items-center gap-4 border border-blue-100">
+                        <div class="bg-blue-100 p-2 rounded-full text-blue-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                            </svg>
                         </div>
+                        <div class="flex-grow">
+                            <p class="text-sm font-semibold text-slate-800">Auto-Location Detected</p>
+                            <p id="locationText" class="text-xs text-slate-500 font-mono mt-0.5">Acquiring GPS...</p>
+                        </div>
+                        <div id="locStatus" class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></div>
                     </div>
 
-                    <button type="submit" id="analyzeBtn" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-md disabled:bg-slate-300 disabled:cursor-not-allowed" disabled>
-                        Analyze & Generate Letter
+                    <button type="submit" id="analyzeBtn" class="w-full bg-slate-900 text-white font-medium py-4 rounded-xl hover:bg-slate-800 transition shadow-lg disabled:bg-slate-300 disabled:cursor-not-allowed flex justify-center items-center gap-2 text-lg" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+                        </svg>
+                        Analyze Issue
                     </button>
                 </form>
 
-                <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-8">
-                    <div class="loader mb-4"></div>
-                    <p class="text-sm text-slate-600 font-medium">AI is analyzing the issue...</p>
+                <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-12">
+                    <div class="loader mb-6"></div>
+                    <p class="text-base text-slate-800 font-semibold animate-pulse">Gemini AI is analyzing...</p>
+                    <p class="text-sm text-slate-500 mt-2">Drafting letter & categorizing issue</p>
                 </div>
             </div>
 
             <!-- Right Column: Results -->
-            <div id="resultsPanel" class="hidden flex-col gap-6">
+            <div id="resultsPanel" class="hidden flex-col gap-6 animate__animated animate__fadeInRight">
+                
+                <h3 class="text-xl font-semibold flex items-center gap-2 px-2">
+                    <span class="bg-green-100 text-green-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">2</span>
+                    Review & Submit
+                </h3>
+
                 <!-- Analysis Card -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-start mb-4">
+                <div class="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden relative">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+                    <div class="flex justify-between items-start mb-6 z-10">
                         <div>
-                            <h2 id="resTitle" class="text-xl font-bold text-slate-800">Pothole on Main St</h2>
-                            <p id="resCategory" class="text-sm text-blue-600 font-medium mt-1">Road Infrastructure</p>
+                            <span id="resCategory" class="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold uppercase tracking-wider rounded-full mb-2">Category</span>
+                            <h2 id="resTitle" class="text-2xl font-bold text-slate-900 leading-tight">Issue Title</h2>
                         </div>
-                        <div class="text-center">
-                            <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white" id="severityBadge">
-                                8
+                        <div class="text-center shrink-0 ml-4">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl text-white shadow-lg" id="severityBadge">
+                                0
                             </div>
-                            <span class="text-xs text-slate-500 mt-1 block">Severity</span>
+                            <span class="text-xs font-semibold text-slate-500 mt-2 block uppercase tracking-wide">Severity</span>
                         </div>
                     </div>
                     
-                    <p id="resDescription" class="text-sm text-slate-600 mb-4">Large pothole creating hazard for two-wheelers.</p>
+                    <p id="resDescription" class="text-slate-600 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100 leading-relaxed"></p>
                     
-                    <div id="map" class="mb-4 border border-slate-200 shadow-inner"></div>
+                    <div id="map" class="shadow-inner border border-slate-200"></div>
                 </div>
 
                 <!-- Complaint Letter Card -->
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="text-lg font-semibold mb-3">Auto-Generated Complaint</h3>
-                    <p class="text-xs text-slate-500 mb-3">To: <span id="resEmail" class="font-medium text-slate-700">roads@municipality.gov</span></p>
+                <div class="bg-white p-6 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="bg-purple-100 p-2 rounded-lg text-purple-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-slate-800">Formal Complaint</h3>
+                            <p class="text-xs text-slate-500">Auto-drafted for <span id="resEmail" class="font-semibold text-slate-700">email@dept.gov</span></p>
+                        </div>
+                    </div>
                     
-                    <textarea id="resLetter" rows="8" class="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none" spellcheck="false"></textarea>
+                    <textarea id="resLetter" rows="10" class="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:outline-none text-slate-700 leading-relaxed font-serif resize-y" spellcheck="false"></textarea>
                     
-                    <button id="sendBtn" class="w-full bg-green-600 text-white font-medium py-3 rounded-lg hover:bg-green-700 transition shadow-md flex items-center justify-center gap-2">
+                    <button id="sendBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                         </svg>
-                        Send Complaint via Default Mail
+                        Send via Email App
                     </button>
-                    <p class="text-center text-xs text-slate-400 mt-2">Opens your email app with pre-filled details.</p>
+                    <p class="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        Opens securely in your default mail client
+                    </p>
                 </div>
             </div>
 
@@ -131,20 +229,73 @@
         let currentMap = null;
         let currentMarker = null;
 
+        // API Key Management
+        function toggleSettings() {
+            const modal = document.getElementById('settingsModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                document.getElementById('apiKeyInput').value = localStorage.getItem('civic_gemini_key') || '';
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('civic_gemini_key', key);
+                updateKeyStatus();
+                toggleSettings();
+            } else {
+                alert("Please enter a valid API key.");
+            }
+        }
+
+        function updateKeyStatus() {
+            const hasKey = !!localStorage.getItem('civic_gemini_key');
+            const indicator = document.getElementById('keyStatus').querySelectorAll('span');
+            if (hasKey) {
+                indicator[0].classList.replace('bg-red-400', 'bg-green-400');
+                indicator[1].classList.replace('bg-red-500', 'bg-green-500');
+                indicator[0].classList.remove('animate-ping');
+            } else {
+                indicator[0].classList.replace('bg-green-400', 'bg-red-400');
+                indicator[1].classList.replace('bg-green-500', 'bg-red-500');
+                indicator[0].classList.add('animate-ping');
+            }
+        }
+
+        // Initialize status on load
+        updateKeyStatus();
+
+        // Check key before upload
+        function ensureApiKey() {
+            if (!localStorage.getItem('civic_gemini_key')) {
+                toggleSettings();
+                return false;
+            }
+            return true;
+        }
+
         // Get Location
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
-                    document.getElementById('locationText').textContent = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
+                    document.getElementById('locStatus').classList.replace('bg-yellow-400', 'bg-green-500');
+                    document.getElementById('locStatus').classList.remove('animate-pulse');
                 },
                 (error) => {
-                    document.getElementById('locationText').textContent = "Location access denied. Using mock location.";
-                    // Mock location if denied (e.g., somewhere in a city)
+                    document.getElementById('locationText').textContent = "Location denied. Using demo coords.";
+                    document.getElementById('locStatus').classList.replace('bg-yellow-400', 'bg-red-500');
+                    document.getElementById('locStatus').classList.remove('animate-pulse');
+                    // Mock location if denied
                     currentLat = 19.0760;
                     currentLng = 72.8777;
-                }
+                },
+                { enableHighAccuracy: true }
             );
         } else {
             document.getElementById('locationText').textContent = "Geolocation not supported.";
@@ -164,7 +315,7 @@
                 reader.onload = function(e) {
                     imagePreview.src = e.target.result;
                     previewContainer.classList.remove('hidden');
-                    uploadPrompt.classList.add('hidden');
+                    uploadPrompt.style.opacity = '0';
                     analyzeBtn.disabled = false;
                 }
                 reader.readAsDataURL(file);
@@ -175,19 +326,25 @@
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            if (!ensureApiKey()) return;
+
             const file = imageInput.files[0];
             if (!file) return;
+
+            const apiKey = localStorage.getItem('civic_gemini_key');
 
             const formData = new FormData();
             formData.append('image', file);
             formData.append('lat', currentLat);
             formData.append('lng', currentLng);
-            formData.append('address', `${currentLat}, ${currentLng}`); // Could use reverse geocoding API here
+            formData.append('address', `${currentLat}, ${currentLng}`);
+            formData.append('api_key', apiKey);
 
-            document.getElementById('uploadForm').style.opacity = '0.5';
+            document.getElementById('uploadForm').classList.add('opacity-50', 'pointer-events-none');
             document.getElementById('loadingIndicator').classList.remove('hidden');
             document.getElementById('loadingIndicator').classList.add('flex');
             document.getElementById('resultsPanel').classList.add('hidden');
+            document.getElementById('resultsPanel').classList.remove('flex');
             analyzeBtn.disabled = true;
 
             try {
@@ -202,12 +359,17 @@
                     showResults(data);
                 } else {
                     alert('Error: ' + (data.error || 'Something went wrong'));
+                    if (data.error && data.error.includes('API key')) {
+                        localStorage.removeItem('civic_gemini_key');
+                        updateKeyStatus();
+                        toggleSettings();
+                    }
                 }
             } catch (error) {
                 console.error(error);
-                alert('Connection error');
+                alert('Connection error communicating with the server.');
             } finally {
-                document.getElementById('uploadForm').style.opacity = '1';
+                document.getElementById('uploadForm').classList.remove('opacity-50', 'pointer-events-none');
                 document.getElementById('loadingIndicator').classList.add('hidden');
                 document.getElementById('loadingIndicator').classList.remove('flex');
                 analyzeBtn.disabled = false;
@@ -218,6 +380,11 @@
             document.getElementById('resultsPanel').classList.remove('hidden');
             document.getElementById('resultsPanel').classList.add('flex');
             
+            // Scroll to results on mobile
+            if(window.innerWidth < 1024) {
+                document.getElementById('resultsPanel').scrollIntoView({behavior: "smooth"});
+            }
+            
             document.getElementById('resTitle').textContent = data.issue_title;
             document.getElementById('resCategory').textContent = data.category;
             document.getElementById('resDescription').textContent = data.description;
@@ -226,27 +393,38 @@
             
             const badge = document.getElementById('severityBadge');
             badge.textContent = data.severity;
-            if(data.severity > 7) {
-                badge.className = "w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-red-500 shadow-lg shadow-red-200";
-            } else if (data.severity > 4) {
-                badge.className = "w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-orange-500 shadow-lg shadow-orange-200";
+            
+            // Dynamic styling based on severity
+            if(data.severity >= 8) {
+                badge.className = "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl text-white shadow-lg bg-gradient-to-br from-red-500 to-rose-700 shadow-red-500/40";
+            } else if (data.severity >= 5) {
+                badge.className = "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl text-white shadow-lg bg-gradient-to-br from-orange-400 to-amber-600 shadow-orange-500/40";
             } else {
-                badge.className = "w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-yellow-400 shadow-lg shadow-yellow-100";
+                badge.className = "w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl text-slate-800 shadow-lg bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-yellow-500/40";
             }
 
             // Initialize Map
             if (!currentMap) {
-                currentMap = L.map('map').setView([currentLat, currentLng], 15);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap contributors'
+                currentMap = L.map('map', { zoomControl: false }).setView([currentLat, currentLng], 16);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap'
                 }).addTo(currentMap);
-                currentMarker = L.marker([currentLat, currentLng]).addTo(currentMap);
+                
+                // Custom beautiful marker
+                const customIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background-color: #ef4444; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [20, 20],
+                    iconAnchor: [10, 10]
+                });
+                
+                currentMarker = L.marker([currentLat, currentLng], {icon: customIcon}).addTo(currentMap);
             } else {
-                currentMap.setView([currentLat, currentLng], 15);
+                currentMap.setView([currentLat, currentLng], 16);
                 currentMarker.setLatLng([currentLat, currentLng]);
             }
             
-            // Invalidate size to fix leaflet rendering issue in hidden divs
+            // Fix map rendering
             setTimeout(() => {
                 currentMap.invalidateSize();
             }, 100);
@@ -255,7 +433,7 @@
             document.getElementById('sendBtn').onclick = function() {
                 const email = data.department_email;
                 const subject = encodeURIComponent(`URGENT: ${data.issue_title} [Severity: ${data.severity}/10]`);
-                const body = encodeURIComponent(document.getElementById('resLetter').value + `\n\nGPS Coordinates: ${currentLat}, ${currentLng}`);
+                const body = encodeURIComponent(document.getElementById('resLetter').value + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`);
                 
                 window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
             };
