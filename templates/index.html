@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CivicSense - AI Issue Reporter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 300px; width: 100%; border-radius: 0.5rem; z-index: 10;}
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <nav class="bg-blue-600 text-white p-4 shadow-md">
+        <div class="max-w-5xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                CivicSense
+            </h1>
+            <p class="text-sm opacity-80">AI-Powered Civic Issue Reporting</p>
+        </div>
+    </nav>
+
+    <main class="max-w-5xl mx-auto p-4 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Left Column: Upload -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+                <h2 class="text-xl font-semibold mb-4">Report an Issue</h2>
+                
+                <form id="uploadForm" class="space-y-4">
+                    <div class="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition cursor-pointer" id="dropZone" onclick="document.getElementById('imageInput').click()">
+                        <div id="imagePreviewContainer" class="hidden mb-4">
+                            <img id="imagePreview" class="max-h-48 mx-auto rounded-lg shadow-sm" />
+                        </div>
+                        <div id="uploadPrompt">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-slate-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <p class="text-sm font-medium text-slate-600">Click to capture or upload photo</p>
+                            <p class="text-xs text-slate-400 mt-1">JPEG, PNG up to 10MB</p>
+                        </div>
+                        <input type="file" id="imageInput" accept="image/*" class="hidden" capture="environment">
+                    </div>
+
+                    <div class="bg-blue-50 p-3 rounded-lg flex items-start gap-3 border border-blue-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <div>
+                            <p class="text-sm font-medium text-slate-700">Location detected</p>
+                            <p id="locationText" class="text-xs text-slate-500">Acquiring GPS...</p>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="analyzeBtn" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-md disabled:bg-slate-300 disabled:cursor-not-allowed" disabled>
+                        Analyze & Generate Letter
+                    </button>
+                </form>
+
+                <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-8">
+                    <div class="loader mb-4"></div>
+                    <p class="text-sm text-slate-600 font-medium">AI is analyzing the issue...</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Results -->
+            <div id="resultsPanel" class="hidden flex-col gap-6">
+                <!-- Analysis Card -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 id="resTitle" class="text-xl font-bold text-slate-800">Pothole on Main St</h2>
+                            <p id="resCategory" class="text-sm text-blue-600 font-medium mt-1">Road Infrastructure</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white" id="severityBadge">
+                                8
+                            </div>
+                            <span class="text-xs text-slate-500 mt-1 block">Severity</span>
+                        </div>
+                    </div>
+                    
+                    <p id="resDescription" class="text-sm text-slate-600 mb-4">Large pothole creating hazard for two-wheelers.</p>
+                    
+                    <div id="map" class="mb-4 border border-slate-200 shadow-inner"></div>
+                </div>
+
+                <!-- Complaint Letter Card -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-semibold mb-3">Auto-Generated Complaint</h3>
+                    <p class="text-xs text-slate-500 mb-3">To: <span id="resEmail" class="font-medium text-slate-700">roads@municipality.gov</span></p>
+                    
+                    <textarea id="resLetter" rows="8" class="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:outline-none" spellcheck="false"></textarea>
+                    
+                    <button id="sendBtn" class="w-full bg-green-600 text-white font-medium py-3 rounded-lg hover:bg-green-700 transition shadow-md flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                        </svg>
+                        Send Complaint via Default Mail
+                    </button>
+                    <p class="text-center text-xs text-slate-400 mt-2">Opens your email app with pre-filled details.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let currentLat = 0;
+        let currentLng = 0;
+        let currentMap = null;
+        let currentMarker = null;
+
+        // Get Location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    currentLat = position.coords.latitude;
+                    currentLng = position.coords.longitude;
+                    document.getElementById('locationText').textContent = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                },
+                (error) => {
+                    document.getElementById('locationText').textContent = "Location access denied. Using mock location.";
+                    // Mock location if denied (e.g., somewhere in a city)
+                    currentLat = 19.0760;
+                    currentLng = 72.8777;
+                }
+            );
+        } else {
+            document.getElementById('locationText').textContent = "Geolocation not supported.";
+        }
+
+        // Handle Image Selection
+        const imageInput = document.getElementById('imageInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewContainer = document.getElementById('imagePreviewContainer');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    previewContainer.classList.remove('hidden');
+                    uploadPrompt.classList.add('hidden');
+                    analyzeBtn.disabled = false;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle Form Submission
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = imageInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('lat', currentLat);
+            formData.append('lng', currentLng);
+            formData.append('address', `${currentLat}, ${currentLng}`); // Could use reverse geocoding API here
+
+            document.getElementById('uploadForm').style.opacity = '0.5';
+            document.getElementById('loadingIndicator').classList.remove('hidden');
+            document.getElementById('loadingIndicator').classList.add('flex');
+            document.getElementById('resultsPanel').classList.add('hidden');
+            analyzeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResults(data);
+                } else {
+                    alert('Error: ' + (data.error || 'Something went wrong'));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Connection error');
+            } finally {
+                document.getElementById('uploadForm').style.opacity = '1';
+                document.getElementById('loadingIndicator').classList.add('hidden');
+                document.getElementById('loadingIndicator').classList.remove('flex');
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function showResults(data) {
+            document.getElementById('resultsPanel').classList.remove('hidden');
+            document.getElementById('resultsPanel').classList.add('flex');
+            
+            document.getElementById('resTitle').textContent = data.issue_title;
+            document.getElementById('resCategory').textContent = data.category;
+            document.getElementById('resDescription').textContent = data.description;
+            document.getElementById('resEmail').textContent = data.department_email;
+            document.getElementById('resLetter').value = data.complaint_letter;
+            
+            const badge = document.getElementById('severityBadge');
+            badge.textContent = data.severity;
+            if(data.severity > 7) {
+                badge.className = "w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-red-500 shadow-lg shadow-red-200";
+            } else if (data.severity > 4) {
+                badge.className = "w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-orange-500 shadow-lg shadow-orange-200";
+            } else {
+                badge.className = "w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg text-white bg-yellow-400 shadow-lg shadow-yellow-100";
+            }
+
+            // Initialize Map
+            if (!currentMap) {
+                currentMap = L.map('map').setView([currentLat, currentLng], 15);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(currentMap);
+                currentMarker = L.marker([currentLat, currentLng]).addTo(currentMap);
+            } else {
+                currentMap.setView([currentLat, currentLng], 15);
+                currentMarker.setLatLng([currentLat, currentLng]);
+            }
+            
+            // Invalidate size to fix leaflet rendering issue in hidden divs
+            setTimeout(() => {
+                currentMap.invalidateSize();
+            }, 100);
+
+            // Configure Send Button (Native Mailto)
+            document.getElementById('sendBtn').onclick = function() {
+                const email = data.department_email;
+                const subject = encodeURIComponent(`URGENT: ${data.issue_title} [Severity: ${data.severity}/10]`);
+                const body = encodeURIComponent(document.getElementById('resLetter').value + `\n\nGPS Coordinates: ${currentLat}, ${currentLng}`);
+                
+                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+            };
+        }
+    </script>
+</body>
+</html>

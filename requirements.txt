@@ -1,0 +1,4 @@
+flask
+werkzeug
+google-genai
+python-dotenv
