@@ -67,27 +67,44 @@
     </nav>
 
     <!-- Settings Modal -->
-    <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center animate__animated animate__fadeIn animate__faster">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center animate__animated animate__fadeIn animate__faster p-4 overflow-y-auto">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full my-auto transform transition-all">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-800">Setup Gemini API</h2>
+                <h2 class="text-2xl font-bold text-slate-800">Configuration</h2>
                 <button onclick="toggleSettings()" class="text-slate-400 hover:text-slate-600 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             </div>
-            <p class="text-sm text-slate-600 mb-6">To use CivicSense, please provide your Google Gemini API key. It is stored securely in your browser's local storage and is never saved on our servers.</p>
             
-            <div class="space-y-4">
+            <div class="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
                 <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Gemini API Key</label>
-                    <input type="password" id="apiKeyInput" class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="AIzaSy...">
+                    <label class="block text-sm font-bold text-slate-800 mb-1">1. Gemini API Key (Required)</label>
+                    <p class="text-xs text-slate-500 mb-2">Stored securely in your browser's local storage.</p>
+                    <input type="password" id="apiKeyInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="AIzaSy...">
                 </div>
-                <button onclick="saveApiKey()" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
-                    Save API Key
-                </button>
+
+                <hr class="border-slate-100">
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-800 mb-1">2. Automated Email (Optional)</label>
+                    <p class="text-xs text-slate-500 mb-2">Provide Gmail App Password for SMTP integration.</p>
+                    <input type="email" id="smtpUserInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 mb-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Gmail Address">
+                    <input type="password" id="smtpPassInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="App Password">
+                </div>
+
+                <hr class="border-slate-100">
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-800 mb-1">3. Municipal API Webhook (Optional)</label>
+                    <p class="text-xs text-slate-500 mb-2">Direct JSON payload delivery endpoint.</p>
+                    <input type="url" id="webhookInput" class="w-full border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://endpoint.com/webhook">
+                </div>
             </div>
-            <div class="mt-4 text-center">
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-blue-600 hover:underline">Don't have a key? Get one here.</a>
+
+            <div class="mt-6 pt-4 border-t border-slate-100">
+                <button onclick="saveSettings()" class="w-full bg-blue-600 text-white font-medium py-3 rounded-lg hover:bg-blue-700 transition shadow-md">
+                    Save Configuration
+                </button>
             </div>
         </div>
     </div>
@@ -207,15 +224,23 @@
                     
                     <textarea id="resLetter" rows="10" class="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-xl mb-6 focus:ring-2 focus:ring-blue-500 focus:outline-none text-slate-700 leading-relaxed font-serif resize-y" spellcheck="false"></textarea>
                     
+                    <div class="mb-4">
+                        <label class="block text-sm font-semibold text-slate-700 mb-2">Submission Method</label>
+                        <select id="submitMethod" class="w-full border border-slate-300 rounded-lg px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                            <option value="native">📱 Native Device Mail App (Default)</option>
+                            <option value="smtp">📧 Automated Background Email (SMTP)</option>
+                            <option value="api">🔌 Official Municipal API (JSON Webhook)</option>
+                        </select>
+                    </div>
+
                     <button id="sendBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-blue-500/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                         </svg>
-                        Send via Email App
+                        Submit Complaint
                     </button>
-                    <p class="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                        Opens securely in your default mail client
+                    <p id="sendNote" class="text-center text-xs text-slate-400 mt-3 flex items-center justify-center gap-1">
+                        Select a method and submit
                     </p>
                 </div>
             </div>
@@ -228,27 +253,37 @@
         let currentLng = 0;
         let currentMap = null;
         let currentMarker = null;
+        let analysisData = null; // Store analysis results
 
-        // API Key Management
+        // Settings Management
         function toggleSettings() {
             const modal = document.getElementById('settingsModal');
             if (modal.classList.contains('hidden')) {
                 modal.classList.remove('hidden');
                 document.getElementById('apiKeyInput').value = localStorage.getItem('civic_gemini_key') || '';
+                document.getElementById('smtpUserInput').value = localStorage.getItem('civic_smtp_user') || '';
+                document.getElementById('smtpPassInput').value = localStorage.getItem('civic_smtp_pass') || '';
+                document.getElementById('webhookInput').value = localStorage.getItem('civic_api_url') || '';
             } else {
                 modal.classList.add('hidden');
             }
         }
 
-        function saveApiKey() {
+        function saveSettings() {
             const key = document.getElementById('apiKeyInput').value.trim();
             if (key) {
                 localStorage.setItem('civic_gemini_key', key);
-                updateKeyStatus();
-                toggleSettings();
             } else {
-                alert("Please enter a valid API key.");
+                alert("Gemini API Key is required.");
+                return;
             }
+            localStorage.setItem('civic_smtp_user', document.getElementById('smtpUserInput').value.trim());
+            localStorage.setItem('civic_smtp_pass', document.getElementById('smtpPassInput').value.trim());
+            localStorage.setItem('civic_api_url', document.getElementById('webhookInput').value.trim());
+            
+            updateKeyStatus();
+            toggleSettings();
+            alert("Settings saved successfully!");
         }
 
         function updateKeyStatus() {
@@ -356,6 +391,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    analysisData = data; // store globally for submission
                     showResults(data);
                 } else {
                     alert('Error: ' + (data.error || 'Something went wrong'));
@@ -428,16 +464,71 @@
             setTimeout(() => {
                 currentMap.invalidateSize();
             }, 100);
-
-            // Configure Send Button (Native Mailto)
-            document.getElementById('sendBtn').onclick = function() {
-                const email = data.department_email;
-                const subject = encodeURIComponent(`URGENT: ${data.issue_title} [Severity: ${data.severity}/10]`);
-                const body = encodeURIComponent(document.getElementById('resLetter').value + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`);
-                
-                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-            };
         }
+
+        // Handle Submission button
+        document.getElementById('sendBtn').onclick = async function() {
+            if (!analysisData) return;
+            
+            const method = document.getElementById('submitMethod').value;
+            const btn = document.getElementById('sendBtn');
+            const originalText = btn.innerHTML;
+            
+            btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Processing...`;
+            btn.disabled = true;
+
+            const letterBody = document.getElementById('resLetter').value + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`;
+
+            try {
+                if (method === 'native') {
+                    const email = analysisData.department_email;
+                    const subject = encodeURIComponent(`URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`);
+                    const body = encodeURIComponent(letterBody);
+                    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+                } 
+                else if (method === 'smtp') {
+                    const response = await fetch('/api/send_email', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            recipient: analysisData.department_email,
+                            subject: `URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`,
+                            body: letterBody,
+                            smtp_user: localStorage.getItem('civic_smtp_user'),
+                            smtp_pass: localStorage.getItem('civic_smtp_pass')
+                        })
+                    });
+                    const res = await response.json();
+                    if (res.success) alert(res.message);
+                    else alert("Error: " + res.error);
+                } 
+                else if (method === 'api') {
+                    const response = await fetch('/api/submit_municipal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            category: analysisData.category,
+                            lat: currentLat,
+                            lng: currentLng,
+                            severity: analysisData.severity,
+                            description: analysisData.description,
+                            title: analysisData.issue_title,
+                            letter: letterBody,
+                            api_url: localStorage.getItem('civic_api_url')
+                        })
+                    });
+                    const res = await response.json();
+                    if (res.success) alert(res.message);
+                    else alert("Error: " + res.error);
+                }
+            } catch (err) {
+                alert("Submission failed: " + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        };
+
     </script>
 </body>
 </html>

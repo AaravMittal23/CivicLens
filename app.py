@@ -100,5 +100,73 @@ def analyze():
                  os.remove(filepath)
             return jsonify({'error': str(e)}), 500
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import requests
+
+@app.route('/api/send_email', methods=['POST'])
+def send_email():
+    data = request.json
+    recipient = data.get('recipient')
+    subject = data.get('subject')
+    body = data.get('body')
+    
+    # Mocking SMTP for Demo unless credentials are provided
+    smtp_user = data.get('smtp_user')
+    smtp_pass = data.get('smtp_pass')
+    
+    if smtp_user and smtp_pass:
+        try:
+            msg = MIMEMultipart()
+            msg['From'] = smtp_user
+            msg['To'] = recipient
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+            
+            # Defaulting to Gmail SMTP for demo purposes
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+            server.quit()
+            return jsonify({'success': True, 'message': 'Email sent successfully via SMTP!'})
+        except Exception as e:
+            return jsonify({'error': f'SMTP Error: {str(e)}'}), 500
+    else:
+        # Mock successful send
+        print(f"[MOCK SMTP] Sending email to {recipient} with subject '{subject}'")
+        return jsonify({'success': True, 'message': 'Simulated automated email sent! (Provide SMTP credentials in settings for real delivery)'})
+
+@app.route('/api/submit_municipal', methods=['POST'])
+def submit_municipal():
+    data = request.json
+    api_url = data.get('api_url')
+    
+    payload = {
+        "complaint_category": data.get('category'),
+        "geolocation": {
+            "lat": data.get('lat'),
+            "lng": data.get('lng')
+        },
+        "severity": data.get('severity'),
+        "description": data.get('description'),
+        "title": data.get('title'),
+        "letter_body": data.get('letter'),
+        "status": "OPEN",
+        "source": "CivicSense_AI"
+    }
+    
+    if api_url:
+        try:
+            response = requests.post(api_url, json=payload, timeout=5)
+            return jsonify({'success': True, 'message': f'Payload submitted to Municipal API! Status: {response.status_code}'})
+        except Exception as e:
+            return jsonify({'error': f'API Connection Error: {str(e)}'}), 500
+    else:
+        # Mock successful API call
+        print(f"[MOCK API GATEWAY] Submitted JSON payload: {json.dumps(payload, indent=2)}")
+        return jsonify({'success': True, 'message': 'Simulated JSON Payload sent to Municipal API gateway! (Provide Webhook URL in settings for real delivery)'})
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
