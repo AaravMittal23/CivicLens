@@ -3,5 +3,9 @@
     "submission_method": "api",
     "smtp_user": "",
     "smtp_pass": "",
-    "webhook_url": "http://127.0.0.1:5001/webhook"
+    "webhook_url": "http://127.0.0.1:5001/webhook",
+    "sendgrid_api_key": "",
+    "sendgrid_sender": "",
+    "google_client_id": "",
+    "google_client_secret": ""
 }

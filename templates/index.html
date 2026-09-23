@@ -3,232 +3,386 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CivicSense - AI Issue Reporter</title>
+    <title>CivicLens - Official Reporting Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Animate.css for smooth animations -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-        #map { height: 250px; width: 100%; border-radius: 0.75rem; z-index: 10;}
-        .glassmorphism {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.18);
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        
+        /* Toast Animations */
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .loader {
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #2563eb;
+        .toast-enter { animation: slideUpFade 0.3s ease-out forwards; }
+        
+        /* Spinners */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            border-top: 3px solid white;
+            width: 18px;
+            height: 18px;
             animation: spin 1s linear infinite;
         }
+        .spinner-blue { border-top-color: #2563eb; border-color: rgba(37,99,235,0.2); }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .gradient-text {
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-image: linear-gradient(90deg, #2563eb, #7c3aed);
+        
+        /* Staggered Animations */
+        @keyframes fadeInSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-1 { animation: fadeInSlide 0.2s ease-out forwards; }
+        .stagger-2 { animation: fadeInSlide 0.2s ease-out 0.05s forwards; opacity: 0; }
+        .stagger-3 { animation: fadeInSlide 0.2s ease-out 0.1s forwards; opacity: 0; }
+        .stagger-4 { animation: fadeInSlide 0.2s ease-out 0.15s forwards; opacity: 0; }
+        .stagger-5 { animation: fadeInSlide 0.2s ease-out 0.2s forwards; opacity: 0; }
+
+        /* Map fixes & Marker Drop */
+        .leaflet-container { z-index: 10 !important; font-family: 'Inter', sans-serif; }
+        @keyframes dropMarker {
+            from { transform: translateY(-15px) scale(0.8); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .marker-drop {
+            animation: dropMarker 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative overflow-x-hidden">
+<body class="text-slate-800 flex flex-col min-h-screen">
 
-    <!-- Decorative background blobs -->
-    <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob z-0"></div>
-    <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000 z-0"></div>
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
 
-    <!-- Navigation -->
-    <nav class="glassmorphism sticky top-0 z-50 border-b border-slate-200 shadow-sm">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <div class="bg-blue-600 p-2 rounded-lg text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+    <!-- Official Header -->
+    <nav class="bg-slate-900 text-white shadow-sm border-b-4 border-blue-600">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L3 7v2h18V7L12 2zm0 2.5l5 2.5H7l5-2.5zM4 11v7h2v-7H4zm6 0v7h2v-7h-2zm6 0v7h2v-7h-2zM2 20v2h20v-2H2z" />
+                </svg>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight leading-tight">CivicLens</h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Department of Civic Works</p>
                 </div>
-                <h1 class="text-xl font-bold tracking-tight text-slate-900">CivicSense</h1>
             </div>
-            <!-- Admin link for handoff testing -->
-            <a href="/admin" class="text-xs font-semibold text-slate-500 hover:text-slate-800 transition">Admin Login</a>
+            <div class="flex items-center gap-4">
+                <span class="bg-slate-800 text-slate-300 text-xs font-bold px-2 py-1 rounded border border-slate-700 hidden sm:block">Prototype System</span>
+                <a href="/admin" class="text-xs text-slate-400 hover:text-white transition font-semibold">Admin</a>
+            </div>
         </div>
     </nav>
+    
+    <!-- Info Banner -->
+    <div class="bg-blue-50 border-b border-blue-100 text-blue-800 px-4 py-2 text-[11px] text-center font-medium">
+        ℹ️ This is an AI-assisted civic reporting prototype using simulated routing. Not for production use.
+    </div>
 
     <!-- Main Content -->
-    <main class="max-w-6xl mx-auto px-4 py-12 flex-grow z-10 relative">
-        
-        <!-- Hero Section -->
-        <div class="text-center max-w-2xl mx-auto mb-12 animate__animated animate__fadeInUp">
-            <h2 class="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
-                Report Civic Issues with <span class="gradient-text">AI Precision</span>
-            </h2>
-            <p class="text-lg text-slate-600 mb-8">See a pothole, broken streetlight, or garbage dump? Snap a photo. Our AI identifies the issue, drafts a formal letter, and finds the right department for you instantly.</p>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+    <main class="max-w-5xl mx-auto px-4 py-8 flex-grow w-full">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
             
             <!-- Left Column: Upload -->
-            <div class="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 animate__animated animate__fadeInLeft">
-                <h3 class="text-xl font-semibold mb-6 flex items-center gap-2">
-                    <span class="bg-blue-100 text-blue-600 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">1</span>
-                    Upload Photo
-                </h3>
+            <div class="md:col-span-5 bg-white p-6 rounded-lg shadow-sm border border-slate-200 sticky top-6">
+                <h3 class="font-bold text-slate-800 mb-4 text-lg border-b border-slate-100 pb-2">1. Capture Evidence</h3>
                 
-                <form id="uploadForm" class="space-y-6">
-                    <div class="border-2 border-dashed border-blue-200 rounded-2xl p-10 text-center hover:bg-blue-50/50 transition cursor-pointer group relative overflow-hidden bg-slate-50" id="dropZone" onclick="document.getElementById('imageInput').click()">
-                        <input type="file" id="imageInput" accept="image/*" class="hidden" capture="environment">
-                        <div id="imagePreviewContainer" class="hidden absolute inset-0 bg-black/5 flex items-center justify-center backdrop-blur-sm">
-                            <img id="imagePreview" class="max-h-full object-contain shadow-lg" />
-                            <div class="absolute bottom-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-slate-700 shadow flex items-center gap-1 cursor-pointer">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                Change Photo
-                            </div>
-                        </div>
-                        <div id="uploadPrompt" class="flex flex-col items-center justify-center">
-                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <form id="uploadForm" class="space-y-4">
+                    <!-- Drop Zone -->
+                    <div id="dropZone" class="relative border border-dashed border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors flex flex-col items-center justify-center p-6 text-center overflow-hidden h-52 cursor-pointer" onclick="document.getElementById('imageInput').click()">
+                        <input type="file" id="imageInput" accept="image/*" capture="environment" class="hidden">
+                        
+                        <!-- Initial Prompt -->
+                        <div id="uploadPrompt" class="flex flex-col items-center transition-opacity duration-300">
+                            <div class="bg-white p-3 rounded-full shadow-sm mb-3 border border-slate-200 text-blue-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
                             </div>
                             <p class="text-sm font-semibold text-slate-700">Tap to take a photo</p>
                             <p class="text-xs text-slate-500 mt-1">or browse from gallery</p>
                         </div>
-
-                        <!-- Preview Area -->
-                        <div id="imagePreviewContainer" class="absolute inset-0 hidden bg-slate-900">
-                            <img id="imagePreview" class="w-full h-full object-contain opacity-90">
-                            <div class="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition flex items-center justify-center">
-                                <span class="text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition bg-black/50 px-4 py-2 rounded-full">Change Photo</span>
+                        
+                        <!-- Success Preview -->
+                        <div id="imagePreviewContainer" class="absolute inset-0 hidden bg-white flex flex-col items-center justify-center p-3">
+                            <img id="imagePreview" class="h-32 w-auto object-contain rounded border border-slate-200 mb-3 shadow-sm">
+                            <div class="flex items-center gap-2 text-green-700 bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                                <span id="filenameText" class="text-[11px] font-bold truncate max-w-[150px]">Ready</span>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Location Status -->
                     <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd" />
+                        <div class="flex items-center gap-2 text-slate-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            <span id="locationText" class="text-xs text-slate-600 font-mono">Acquiring GPS...</span>
+                            <span id="locationText" class="text-xs font-mono">Acquiring GPS...</span>
                         </div>
                         <span id="locStatus" class="flex h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
                     </div>
 
-                    <button type="submit" id="analyzeBtn" disabled class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition shadow-sm">
-                        Process Report
+                    <!-- Analyze Button -->
+                    <button type="submit" id="analyzeBtn" disabled class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 shadow-sm text-sm">
+                        <svg id="analyzeBtnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        <span id="analyzeBtnSpinner" class="spinner hidden"></span>
+                        <span id="analyzeBtnText">Process Evidence</span>
                     </button>
                 </form>
-
-                <!-- Loading State -->
-                <div id="loadingIndicator" class="hidden flex-col items-center justify-center py-8">
-                    <div class="loader mb-4"></div>
-                    <p class="text-sm text-slate-500 font-medium animate-pulse">System is identifying the issue...</p>
-                </div>
             </div>
 
-            <!-- Right Column: Results Panel (Hidden Initially) -->
-            <div id="resultsPanel" class="hidden flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Right Column: Container -->
+            <div class="md:col-span-7 bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden relative min-h-[500px] flex flex-col">
                 
-                <div class="bg-slate-50 border-b border-slate-200 px-6 py-4">
-                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
-                        <span class="bg-blue-100 text-blue-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
-                        Incident Summary
-                    </h3>
+                <!-- Loading Overlay -->
+                <div id="loadingOverlay" class="hidden absolute inset-0 bg-white/90 backdrop-blur-[2px] z-20 flex-col items-center justify-center p-8 text-center">
+                    <div class="spinner spinner-blue mb-6 w-10 h-10 border-4"></div>
+                    <div class="w-full max-w-xs space-y-4 text-left">
+                        <div id="step1" class="flex items-center gap-3 text-slate-300 font-semibold text-sm transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Uploading Evidence
+                        </div>
+                        <div id="step2" class="flex items-center gap-3 text-slate-300 font-semibold text-sm transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Analyzing Frame Data
+                        </div>
+                        <div id="step3" class="flex items-center gap-3 text-slate-300 font-semibold text-sm transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Matching Geography & Ward
+                        </div>
+                        <div id="step4" class="flex items-center gap-3 text-slate-300 font-semibold text-sm transition-colors duration-200">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                            Drafting Official Record
+                        </div>
+                    </div>
                 </div>
 
-                <div class="p-6">
-                    <div class="flex items-start justify-between mb-4">
-                        <div>
-                            <h2 id="resTitle" class="text-xl font-bold text-slate-900 mb-1">...</h2>
-                            <span id="resCategory" class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-semibold border border-slate-200">...</span>
-                        </div>
-                        <div class="text-center">
-                            <div id="severityBadge" class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xl"></div>
-                            <span class="text-[10px] text-slate-500 font-bold uppercase tracking-wide mt-1 block">Severity</span>
-                        </div>
+                <!-- Empty State -->
+                <div id="emptyState" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
+                    <div class="bg-slate-50 p-4 rounded-full mb-4 border border-slate-100">
+                        <svg class="h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
                     </div>
-
-                    <p id="resDescription" class="text-sm text-slate-600 mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100"></p>
-
-                    <!-- Draggable Map -->
-                    <div class="mb-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Location Data</label>
-                        <div id="map" class="w-full h-40 rounded-lg border border-slate-200 shadow-inner z-0"></div>
-                        <p class="text-[10px] text-slate-400 mt-1 text-right">You can drag the pin to correct the location.</p>
+                    <h3 class="font-bold text-slate-700 text-base mb-2">Awaiting Evidence</h3>
+                    <p class="text-xs max-w-xs mb-4 leading-relaxed">Upload a clear photo to begin. CivicLens automatically detects and categorizes:</p>
+                    <div class="flex flex-wrap justify-center gap-2 max-w-xs">
+                        <span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-semibold border border-slate-200">Potholes</span>
+                        <span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-semibold border border-slate-200">Streetlights</span>
+                        <span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-semibold border border-slate-200">Illegal Dumping</span>
+                        <span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-semibold border border-slate-200">Water Leaks</span>
                     </div>
+                </div>
 
-                    <!-- Department Routing -->
-                    <div class="mb-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Routing To</label>
-                        <div class="flex items-center gap-2 text-sm font-medium text-slate-800">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                            </svg>
-                            <span id="resEmail" class="font-mono">...</span>
-                        </div>
-                    </div>
-
-                    <!-- Auto-Generated Letter -->
-                    <div class="mb-6">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Official Complaint Draft</label>
-                        <textarea id="resLetter" rows="6" class="w-full text-sm p-4 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none text-slate-700 font-serif resize-y" spellcheck="false"></textarea>
+                <!-- Results State -->
+                <div id="resultsState" class="hidden flex-col h-full">
+                    <div class="bg-slate-50 border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+                        <h3 class="font-bold text-slate-800 text-sm">2. Verified Incident Summary</h3>
+                        <span id="resCategory" class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide border border-blue-200">Category</span>
                     </div>
                     
-                    <button id="sendBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 text-base shadow-sm">
-                        Submit Official Report
-                    </button>
-                    <p id="sendNote" class="text-center text-xs text-slate-500 mt-3">
-                        Report will be securely routed to authorities.
-                    </p>
-                </div>
-            </div>
+                    <div class="p-6 overflow-y-auto">
+                        <div class="flex justify-between items-start mb-5 stagger-1">
+                            <h2 id="resTitle" class="text-xl font-bold text-slate-900 leading-tight">Title</h2>
+                            <p id="resTimestamp" class="text-[10px] text-slate-500 font-semibold whitespace-nowrap ml-4"></p>
+                        </div>
+                        
+                        <!-- Before vs AI View (Side by Side) -->
+                        <div class="grid grid-cols-2 gap-4 mb-5 stagger-2">
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Original Evidence</label>
+                                <img id="resImgOriginal" class="w-full h-28 object-cover rounded border border-slate-200 shadow-sm" src="">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">AI Detection Overlay</label>
+                                <div class="relative">
+                                    <img id="resImgAI" class="w-full h-28 object-cover rounded border border-slate-200 filter contrast-125 saturate-150 shadow-sm" src="">
+                                    <div class="absolute inset-0 border-2 border-red-500 rounded m-1.5 bg-red-500/10 pointer-events-none flex items-start p-1">
+                                        <span class="bg-red-500 text-white text-[8px] font-bold px-1 rounded shadow uppercase">Detected</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Metric Cards -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5 stagger-3">
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                                <p class="text-[9px] text-slate-500 uppercase font-bold mb-0.5 tracking-wider">Severity</p>
+                                <div id="severityBadge" class="text-sm font-black text-slate-800">0/10</div>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                                <p class="text-[9px] text-slate-500 uppercase font-bold mb-0.5 tracking-wider">Confidence</p>
+                                <div class="text-sm font-black text-green-600">95%</div>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                                <p class="text-[9px] text-slate-500 uppercase font-bold mb-0.5 tracking-wider">Coordinates</p>
+                                <div id="coordBadge" class="text-[10px] font-bold text-slate-700 truncate mt-1">0, 0</div>
+                            </div>
+                            <div class="bg-slate-50 p-2 rounded border border-slate-200 text-center">
+                                <p class="text-[9px] text-slate-500 uppercase font-bold mb-0.5 tracking-wider">Accuracy</p>
+                                <div class="text-[11px] font-bold text-blue-700 truncate mt-0.5">± 5 meters</div>
+                            </div>
+                        </div>
 
+                        <div class="bg-slate-50 p-3.5 rounded border border-slate-200 mb-5 stagger-4">
+                            <p id="resDescription" class="text-xs text-slate-700 leading-relaxed font-medium"></p>
+                        </div>
+                        
+                        <!-- Map -->
+                        <div class="mb-5 relative stagger-5">
+                            <div class="flex justify-between items-end mb-1.5">
+                                <label class="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Location Routing</label>
+                                <p class="text-[9px] text-slate-400 italic">Drag pin to correct.</p>
+                            </div>
+                            <div class="rounded border border-slate-300 overflow-hidden shadow-inner h-36 relative">
+                                <div id="map" class="absolute inset-0 z-0"></div>
+                            </div>
+                            <div class="mt-2 text-xs flex items-center gap-1.5 text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Routing to Ward: <strong id="wardBadge">Dept</strong></span>
+                            </div>
+                        </div>
+                        
+                        <!-- Letter -->
+                        <div class="mb-5 stagger-5">
+                            <label class="block text-[9px] font-bold text-slate-500 uppercase mb-1.5 tracking-wider">Generated Official Record</label>
+                            <textarea id="resLetter" rows="4" class="w-full text-xs p-3 bg-white border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 outline-none resize-y text-slate-800 font-serif leading-relaxed shadow-sm"></textarea>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <button id="sendBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded hover:bg-blue-700 transition flex items-center justify-center gap-2 shadow-sm text-sm stagger-5">
+                            <svg id="sendBtnIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            </svg>
+                            <span id="sendBtnSpinner" class="spinner hidden"></span>
+                            <span id="sendBtnText">Submit to Authority</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tracking State -->
+                <div id="trackingState" class="hidden flex-col h-full bg-slate-50">
+                    <div class="bg-green-600 px-6 py-6 text-center text-white border-b border-green-700">
+                        <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-green-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h3 class="font-bold text-xl mb-1">Report Logged</h3>
+                        <p class="text-green-100 text-xs font-medium">Ticket ID: <span class="font-mono font-bold tracking-widest bg-green-700 px-1.5 py-0.5 rounded text-[11px]" id="ticketIdDisplay">CIV-0000</span></p>
+                    </div>
+                    <div class="p-8">
+                        <h4 class="font-bold text-slate-800 mb-5 text-sm uppercase tracking-wider">Status Timeline</h4>
+                        <div class="relative pl-6 border-l-2 border-slate-200 space-y-6 ml-2">
+                            <div class="relative">
+                                <div class="absolute -left-[29px] bg-green-500 w-3 h-3 rounded-full border-[3px] border-slate-50 shadow-sm"></div>
+                                <p class="font-bold text-slate-800 text-xs">Complaint Received</p>
+                                <p class="text-[10px] text-slate-500 mt-0.5" id="timelineTime">Just now</p>
+                            </div>
+                            <div class="relative">
+                                <div class="absolute -left-[29px] bg-white w-3 h-3 rounded-full border-[3px] border-slate-200 shadow-sm"></div>
+                                <p class="font-bold text-slate-400 text-xs">Assigned to Department</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Pending</p>
+                            </div>
+                            <div class="relative">
+                                <div class="absolute -left-[29px] bg-white w-3 h-3 rounded-full border-[3px] border-slate-200 shadow-sm"></div>
+                                <p class="font-bold text-slate-400 text-xs">Inspection Scheduled</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Pending</p>
+                            </div>
+                            <div class="relative">
+                                <div class="absolute -left-[29px] bg-white w-3 h-3 rounded-full border-[3px] border-slate-200 shadow-sm"></div>
+                                <p class="font-bold text-slate-400 text-xs">Issue Resolved</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5">Pending</p>
+                            </div>
+                        </div>
+                        
+                        <button onclick="window.location.reload()" class="mt-8 w-full bg-white border border-slate-200 text-slate-700 font-bold py-2.5 rounded hover:bg-slate-50 transition shadow-sm text-sm">
+                            Submit Another Report
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
         </div>
     </main>
 
     <script>
+        // --- TOAST NOTIFICATION SYSTEM ---
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass, iconHtml;
+            if (type === 'success') {
+                bgClass = 'bg-green-600';
+                iconHtml = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            } else if (type === 'error') {
+                bgClass = 'bg-red-600';
+                iconHtml = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+            } else {
+                bgClass = 'bg-blue-600';
+                iconHtml = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+            
+            toast.className = `toast-enter flex items-center gap-2 ${bgClass} text-white px-3 py-2.5 rounded shadow-lg text-xs font-medium mb-2`;
+            toast.innerHTML = `${iconHtml} <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // --- GLOBAL STATE ---
         let currentLat = 0;
         let currentLng = 0;
         let currentMap = null;
         let currentMarker = null;
-        let analysisData = null; // Store analysis results
-        let compressedImageBlob = null; // Store compressed image
+        let analysisData = null;
+        let compressedImageBlob = null;
 
-        // Get Location
+        // --- GEOLOCATION ---
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     currentLat = position.coords.latitude;
                     currentLng = position.coords.longitude;
-                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)} (You can drag the pin later to adjust)`;
+                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`;
                     document.getElementById('locStatus').classList.replace('bg-yellow-400', 'bg-green-500');
                     document.getElementById('locStatus').classList.remove('animate-pulse');
                 },
                 (error) => {
-                    document.getElementById('locationText').textContent = "Location denied. Using demo coords.";
+                    document.getElementById('locationText').textContent = "Location denied. Defaulting.";
                     document.getElementById('locStatus').classList.replace('bg-yellow-400', 'bg-red-500');
                     document.getElementById('locStatus').classList.remove('animate-pulse');
-                    // Mock location if denied
                     currentLat = 19.0760;
                     currentLng = 72.8777;
+                    showToast("Location access denied. Using demo coordinates.", "error");
                 },
                 { enableHighAccuracy: true }
             );
-        } else {
-            document.getElementById('locationText').textContent = "Geolocation not supported.";
         }
 
-        // Handle Image Selection and Compression
+        // --- UPLOAD FLOW ---
         const imageInput = document.getElementById('imageInput');
         const imagePreview = document.getElementById('imagePreview');
         const previewContainer = document.getElementById('imagePreviewContainer');
         const uploadPrompt = document.getElementById('uploadPrompt');
         const analyzeBtn = document.getElementById('analyzeBtn');
+        const dropZone = document.getElementById('dropZone');
 
         imageInput.addEventListener('change', function() {
             const file = this.files[0];
@@ -237,37 +391,35 @@
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        // Compress Image to prevent slow uploads and server memory crashes
-                        const MAX_WIDTH = 1024;
-                        const MAX_HEIGHT = 1024;
-                        let width = img.width;
-                        let height = img.height;
-
+                        const MAX_WIDTH = 1024; const MAX_HEIGHT = 1024;
+                        let width = img.width; let height = img.height;
                         if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
+                            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                         } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
+                            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                         }
-
                         const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
+                        canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
                         canvas.toBlob((blob) => {
                             compressedImageBlob = blob;
-                            // Show preview
-                            imagePreview.src = URL.createObjectURL(blob);
+                            
+                            const objUrl = URL.createObjectURL(blob);
+                            imagePreview.src = objUrl;
+                            document.getElementById('resImgOriginal').src = objUrl;
+                            document.getElementById('resImgAI').src = objUrl;
+                            
                             previewContainer.classList.remove('hidden');
-                            uploadPrompt.style.opacity = '0';
+                            uploadPrompt.classList.add('hidden');
+                            
+                            dropZone.classList.remove('border-slate-300', 'border-dashed');
+                            dropZone.classList.add('border-green-400', 'border-solid', 'bg-green-50/30');
+                            document.getElementById('filenameText').textContent = file.name;
+                            
                             analyzeBtn.disabled = false;
+                            showToast("Evidence securely loaded.", "success");
                         }, 'image/jpeg', 0.8);
                     }
                     img.src = e.target.result;
@@ -276,10 +428,35 @@
             }
         });
 
-        // Handle Form Submission
+        // --- AI PROCESSING SIMULATION ---
+        async function runLoadingSequence() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+            
+            const steps = [
+                document.getElementById('step1'),
+                document.getElementById('step2'),
+                document.getElementById('step3'),
+                document.getElementById('step4')
+            ];
+            
+            steps.forEach(s => {
+                s.classList.remove('text-green-600');
+                s.classList.add('text-slate-300');
+            });
+
+            for (let i = 0; i < steps.length; i++) {
+                await new Promise(r => setTimeout(r, 450)); 
+                steps[i].classList.remove('text-slate-300');
+                steps[i].classList.add('text-green-600');
+            }
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        // --- MAIN SUBMISSION TO AI ---
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             if (!compressedImageBlob) return;
 
             const formData = new FormData();
@@ -288,64 +465,81 @@
             formData.append('lng', currentLng);
             formData.append('address', `${currentLat}, ${currentLng}`);
 
-            document.getElementById('uploadForm').classList.add('opacity-50', 'pointer-events-none');
-            document.getElementById('loadingIndicator').classList.remove('hidden');
-            document.getElementById('loadingIndicator').classList.add('flex');
-            document.getElementById('resultsPanel').classList.add('hidden');
-            document.getElementById('resultsPanel').classList.remove('flex');
+            const btnIcon = document.getElementById('analyzeBtnIcon');
+            const btnSpinner = document.getElementById('analyzeBtnSpinner');
+            const btnText = document.getElementById('analyzeBtnText');
+            
             analyzeBtn.disabled = true;
+            btnIcon.classList.add('hidden');
+            btnSpinner.classList.remove('hidden');
+            btnText.textContent = "Processing...";
+            
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsState').classList.remove('hidden');
+            document.getElementById('resultsState').classList.add('flex');
+            document.getElementById('trackingState').classList.add('hidden');
+            document.getElementById('trackingState').classList.remove('flex');
+            
+            const loadingPromise = runLoadingSequence();
+            let data = null;
+            let fetchSuccess = false;
 
             try {
-                const response = await fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    analysisData = data; // store globally for submission
-                    showResults(data);
-                } else {
-                    alert('Server Error: ' + (data.error || 'Something went wrong processing the image.'));
-                }
+                const response = await fetch('/analyze', { method: 'POST', body: formData });
+                data = await response.json();
+                if (response.ok) fetchSuccess = true;
+                else showToast(data.error || 'Server Error', 'error');
             } catch (error) {
-                console.error(error);
-                alert('Connection error communicating with the server. Please check your internet connection.');
-            } finally {
-                document.getElementById('uploadForm').classList.remove('opacity-50', 'pointer-events-none');
-                document.getElementById('loadingIndicator').classList.add('hidden');
-                document.getElementById('loadingIndicator').classList.remove('flex');
-                analyzeBtn.disabled = false;
+                showToast('Connection error. Is the server running?', 'error');
+            }
+
+            await loadingPromise;
+            
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.remove('flex');
+            
+            btnIcon.classList.remove('hidden');
+            btnSpinner.classList.add('hidden');
+            btnText.textContent = "Process Evidence";
+            analyzeBtn.disabled = false;
+
+            if (fetchSuccess && data) {
+                analysisData = data;
+                renderResults(data);
+                showToast("Analysis verified.", "success");
+            } else {
+                document.getElementById('resultsState').classList.add('hidden');
+                document.getElementById('resultsState').classList.remove('flex');
+                document.getElementById('emptyState').classList.remove('hidden');
             }
         });
 
-        function showResults(data) {
-            document.getElementById('resultsPanel').classList.remove('hidden');
-            document.getElementById('resultsPanel').classList.add('flex');
-            
-            // Scroll to results on mobile
-            if(window.innerWidth < 1024) {
-                document.getElementById('resultsPanel').scrollIntoView({behavior: "smooth"});
+        // --- RENDER RESULTS ---
+        function renderResults(data) {
+            if(window.innerWidth < 768) {
+                document.getElementById('resultsState').scrollIntoView({behavior: "smooth", block: "start"});
             }
             
             document.getElementById('resTitle').textContent = data.issue_title;
             document.getElementById('resCategory').textContent = data.category;
-            document.getElementById('resDescription').textContent = data.description;
-            document.getElementById('resEmail').textContent = data.department_email;
+            
+            // Natural language rewriting
+            const severityWord = data.severity >= 8 ? 'critical' : data.severity >= 5 ? 'moderate' : 'minor';
+            const naturalDesc = `Our AI analysis has recorded a ${severityWord} incident categorized under "${data.category}". The algorithm identified: ${data.description} The system has successfully matched this geolocation to the appropriate civic ward and prepared a formal digital record.`;
+            document.getElementById('resDescription').textContent = naturalDesc;
+            
+            const deptName = data.department_email ? data.department_email.split('@')[0].toUpperCase() : 'DEPT';
+            document.getElementById('wardBadge').textContent = deptName;
+            
             document.getElementById('resLetter').value = data.complaint_letter;
+            document.getElementById('resTimestamp').textContent = new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+            document.getElementById('coordBadge').textContent = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
             
             const badge = document.getElementById('severityBadge');
-            badge.textContent = data.severity;
-            
-            // Dynamic styling based on severity
-            if(data.severity >= 8) {
-                badge.className = "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xl bg-red-100 text-red-700 border border-red-200";
-            } else if (data.severity >= 5) {
-                badge.className = "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xl bg-orange-100 text-orange-700 border border-orange-200";
-            } else {
-                badge.className = "w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xl bg-yellow-100 text-yellow-700 border border-yellow-200";
-            }
+            badge.textContent = `${data.severity}/10`;
+            if(data.severity >= 8) badge.className = "text-sm font-black text-red-600";
+            else if (data.severity >= 5) badge.className = "text-sm font-black text-orange-500";
+            else badge.className = "text-sm font-black text-yellow-600";
 
             // Initialize Map
             if (!currentMap) {
@@ -354,56 +548,52 @@
                     attribution: '&copy; OpenStreetMap'
                 }).addTo(currentMap);
                 
-                // Custom beautiful marker
                 const customIcon = L.divIcon({
                     className: 'custom-div-icon',
-                    html: `<div style="background-color: #2563eb; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>`,
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
+                    html: `<div class="marker-drop" style="background-color: #2563eb; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
                 });
                 
                 currentMarker = L.marker([currentLat, currentLng], {icon: customIcon, draggable: true}).addTo(currentMap);
-                
-                // Allow user to drag pin to correct location
                 currentMarker.on('dragend', function (e) {
                     const coords = e.target.getLatLng();
                     currentLat = coords.lat;
                     currentLng = coords.lng;
-                    document.getElementById('locationText').textContent = `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)} (Manual Override)`;
+                    document.getElementById('coordBadge').textContent = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
+                    showToast("Coordinates updated.", "info");
                 });
             } else {
                 currentMap.setView([currentLat, currentLng], 16);
                 currentMarker.setLatLng([currentLat, currentLng]);
+                // Re-trigger animation by cloning and replacing icon
+                const el = currentMarker.getElement();
+                if(el && el.firstChild) {
+                    el.firstChild.style.animation = 'none';
+                    el.firstChild.offsetHeight; // trigger reflow
+                    el.firstChild.style.animation = null; 
+                }
             }
             
-            // Update Submit button based on method
-            const sendBtn = document.getElementById('sendBtn');
-            const sendNote = document.getElementById('sendNote');
+            setTimeout(() => currentMap.invalidateSize(), 100);
+            
             if (data.sys_submission_method === 'oauth') {
-                sendBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 48 48" fill="currentColor"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.7 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Sign in with Google to Submit`;
-                sendBtn.className = "w-full bg-white text-slate-700 border border-slate-300 font-bold py-3 rounded-lg hover:bg-slate-50 transition flex items-center justify-center gap-2 text-base shadow-sm";
-                sendNote.textContent = "You will be prompted to authorize Gmail access.";
+                document.getElementById('sendBtnText').textContent = "Authorize with Google";
             } else {
-                sendBtn.innerHTML = `Submit Official Report`;
-                sendBtn.className = "w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2 text-base shadow-sm";
-                sendNote.textContent = "Report will be securely routed to authorities.";
+                document.getElementById('sendBtnText').textContent = "Submit to Authority";
             }
-
-            // Fix map rendering
-            setTimeout(() => {
-                currentMap.invalidateSize();
-            }, 100);
         }
 
+        // --- FINAL SUBMISSION ---
         async function performSubmit(token = null, citizenEmail = null) {
             const letterBody = document.getElementById('resLetter').value;
             
             if (analysisData.sys_submission_method === 'native') {
                 const email = analysisData.department_email;
-                const subject = encodeURIComponent(`URGENT: ${analysisData.issue_title} [Severity: ${analysisData.severity}/10]`);
+                const subject = encodeURIComponent(`URGENT: ${analysisData.issue_title}`);
                 const body = encodeURIComponent(letterBody + `\n\nLocation: https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLng}`);
                 window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-                return;
+                return true;
             } 
             
             const payload = {
@@ -425,78 +615,94 @@
                 body: JSON.stringify(payload)
             });
             const res = await response.json();
-            if (res.success) alert("✅ " + res.message);
-            else alert("❌ Error: " + res.error);
+            if (res.success) {
+                showToast(res.message, "success");
+                return true;
+            } else {
+                showToast(res.error, "error");
+                return false;
+            }
         }
 
-        // Handle Submission button
         document.getElementById('sendBtn').onclick = async function() {
             if (!analysisData) return;
             
             const btn = document.getElementById('sendBtn');
-            const originalText = btn.innerHTML;
+            const btnIcon = document.getElementById('sendBtnIcon');
+            const btnSpinner = document.getElementById('sendBtnSpinner');
+            const btnText = document.getElementById('sendBtnText');
+            
+            const startLoading = (text) => {
+                btn.disabled = true;
+                if(btnIcon) btnIcon.classList.add('hidden');
+                btnSpinner.classList.remove('hidden');
+                btnText.textContent = text;
+            };
+            const stopLoading = (text) => {
+                btn.disabled = false;
+                if(btnIcon) btnIcon.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+                btnText.textContent = text;
+            };
+            const originalText = btnText.textContent;
+            
+            let success = false;
             
             if (analysisData.sys_submission_method === 'sendgrid') {
                 const email = prompt("Enter your email address to receive replies from the municipality:");
-                if (!email) return; // cancelled
-                
-                btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Sending...`;
-                btn.disabled = true;
-                try {
-                    await performSubmit(null, email);
-                } catch(err) { alert("Submit failed"); }
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                return;
-            }
-            
-            if (analysisData.sys_submission_method === 'oauth') {
-                // Open OAuth Popup
+                if (!email) return;
+                startLoading("Transmitting...");
+                try { success = await performSubmit(null, email); } catch(err) { showToast("Transmit failed", "error"); }
+                if(!success) stopLoading(originalText);
+            } 
+            else if (analysisData.sys_submission_method === 'oauth') {
                 try {
                     const res = await fetch('/api/oauth/google/url');
                     const data = await res.json();
+                    const w = 500, h = 600;
+                    const l = (screen.width/2)-(w/2), t = (screen.height/2)-(h/2);
+                    const popup = window.open(data.url, "OAuth", `width=${w},height=${h},top=${t},left=${l}`);
                     
-                    const width = 500;
-                    const height = 600;
-                    const left = (screen.width/2)-(width/2);
-                    const top = (screen.height/2)-(height/2);
-                    
-                    const popup = window.open(data.url, "Google OAuth", `width=${width},height=${height},top=${top},left=${left}`);
-                    
-                    // Listen for message from popup
-                    const messageListener = async function(e) {
+                    window.addEventListener('message', async function messageListener(e) {
                         if (e.data.type === 'oauth_success') {
                             window.removeEventListener('message', messageListener);
-                            btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Sending via Gmail...`;
-                            btn.disabled = true;
+                            startLoading("Transmitting...");
+                            try { success = await performSubmit(e.data.token, null); } 
+                            catch(err) { showToast("Transmit failed", "error"); }
                             
-                            try {
-                                await performSubmit(e.data.token, null);
-                            } catch(err) { alert("Submit failed"); }
-                            
-                            btn.innerHTML = originalText;
-                            btn.disabled = false;
+                            if(success) showTrackingState();
+                            else stopLoading(originalText);
                         }
-                    };
-                    window.addEventListener('message', messageListener);
-                } catch(err) {
-                    alert("Could not initialize OAuth: " + err);
-                }
-                return;
+                    });
+                    return; 
+                } catch(err) { showToast("OAuth init failed", "error"); return; }
+            } 
+            else {
+                startLoading("Transmitting...");
+                try { success = await performSubmit(); } 
+                catch (err) { showToast("Transmit failed", "error"); }
+                if(!success) stopLoading(originalText);
             }
 
-            // Normal submit (API/SMTP)
-            btn.innerHTML = `<div class="loader" style="width:20px; height:20px; border-width: 2px;"></div> Processing...`;
-            btn.disabled = true;
-            try {
-                await performSubmit();
-            } catch (err) {
-                alert("Submission failed: " + err.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
+            if (success) showTrackingState();
         };
+
+        function showTrackingState() {
+            document.getElementById('resultsState').classList.add('hidden');
+            document.getElementById('resultsState').classList.remove('flex');
+            document.getElementById('trackingState').classList.remove('hidden');
+            document.getElementById('trackingState').classList.add('flex');
+            
+            const randomId = Math.floor(Math.random() * 90000) + 10000;
+            document.getElementById('ticketIdDisplay').textContent = `CIV-2026-${randomId}`;
+            
+            const now = new Date();
+            document.getElementById('timelineTime').textContent = now.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit'});
+            
+            if(window.innerWidth < 768) {
+                document.getElementById('trackingState').scrollIntoView({behavior: "smooth", block: "start"});
+            }
+        }
 
     </script>
 </body>
