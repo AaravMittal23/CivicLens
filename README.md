@@ -1,6 +1,11 @@
-# CivicSense - AI Issue Reporter
+# CivicLens
 
-A web app for reporting civic issues (potholes, garbage, broken streetlights) powered by Gemini AI.
+### Live Demo
+
+Click here to use the prototype:
+[https://AaravMittal23.github.io/CivicLens/demo/](https://AaravMittal23.github.io/CivicLens/demo/)
+
+---
 
 ## Features (Working Demo for 3-minute pitch)
 1. **AI Image Analysis**: Upload a photo, and the AI automatically identifies the issue, its category, and assigns a severity rating (out of 10).
@@ -8,7 +13,7 @@ A web app for reporting civic issues (potholes, garbage, broken streetlights) po
 3. **Live Geolocation**: Automatically captures GPS coordinates and displays the issue on an interactive Leaflet map.
 4. **Native Email Integration**: Click "Send Complaint" to open the device's default mail app with the email, subject, and generated letter pre-filled (No SMTP setup required—perfect for quick demos).
 
-## How to Run the Demo locally
+## How to Run the Flask App locally (For Developers)
 
 1. **Prerequisites**: Python 3 and a Gemini API Key.
    Get an API key from Google AI Studio: https://aistudio.google.com/app/apikey
